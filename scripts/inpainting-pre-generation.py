@@ -4,8 +4,9 @@ import modules.scripts as scripts
 import gradio as gr
 
 from modules import processing
-from modules.processing import Processed, StableDiffusionProcessingTxt2Img
-from modules.shared import sd_model
+from modules.processing import Processed, StableDiffusionProcessingTxt2Img, create_infotext
+from modules.shared import sd_model, opts
+import modules.images as images
 
 class Script(scripts.Script):
     def title(self):
@@ -48,7 +49,7 @@ class Script(scripts.Script):
                 restore_faces=p.restore_faces,
                 tiling=p.tiling,
                 enable_hr=None,
-                denoising_strength=None,
+                denoising_strength=None
             )
         
         processed = processing.process_images(p_txt)
@@ -61,6 +62,8 @@ class Script(scripts.Script):
 
         print('Inpainting pre-generation: actually inpainting the generated images')
         p.n_iter = 1
+        do_not_save_grid = p.do_not_save_grid
+        p.do_not_save_grid=True
         output_images = []
 
         for pics in pics_batches:
@@ -68,5 +71,26 @@ class Script(scripts.Script):
             processed = processing.process_images(p)
             output_images += processed.images
             p_info + '\n' + processed.info
-        processed = Processed(p, output_images, initial_seed, p_info)
+        
+        index_of_first_image = 0
+        if not do_not_save_grid:
+            index_of_first_image = to_grid(p, p_info, "grid", output_images)
+
+        processed = Processed(p, output_images, initial_seed, p_info, index_of_first_image=index_of_first_image)
         return processed
+    
+def to_grid(p, p_info, grid_type, output_images):
+    index_of_first_image = 0
+    unwanted_grid_because_of_img_count = len(output_images) < 2 and opts.grid_only_if_multiple
+    if (opts.return_grid or opts.grid_save) and not p.do_not_save_grid and not unwanted_grid_because_of_img_count:
+        grid = images.image_grid(output_images, p.batch_size)
+
+        if opts.return_grid:
+            if opts.enable_pnginfo:
+                grid.info["parameters"] = p_info
+            output_images.insert(0, grid)
+            index_of_first_image = 1
+
+        if opts.grid_save:
+            images.save_image(grid, p.outpath_grids, grid_type, p.all_seeds[0], p.all_prompts[0], opts.grid_format, info=p_info, short_filename=not opts.grid_extended_filename, p=p, grid=True)
+    return index_of_first_image
