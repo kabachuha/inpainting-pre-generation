@@ -53,9 +53,17 @@ class Script(scripts.Script):
         p_info = processed.info
         initial_seed = processed.seed
 
-        print('Inpainting pre-generation: actually inpainting the generated images')
+        # splitting the pics into batches
+        pics_batches = [p_pics[i:i+p.batch_size] for i in range(0, len(p_pics), p.batch_size)]
 
-        p.init_images = p_pics
-        processed = processing.process_images(p)
-        processed = Processed(p, processed.images, initial_seed, p_info + processed.info)
+        print('Inpainting pre-generation: actually inpainting the generated images')
+        p.n_iter = 1
+        output_images = []
+
+        for pics in pics_batches:
+            p.init_images = pics
+            processed = processing.process_images(p)
+            output_images += processed.images
+            p_info + '\n' + processed.info
+        processed = Processed(p, output_images, initial_seed, p_info)
         return processed
