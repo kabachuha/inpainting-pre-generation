@@ -25,7 +25,7 @@ class Script(scripts.Script):
         return [pregen_prompt, pregen_negative_prompt, override_steps_count, pregen_steps_count]
     
     def run(self, p, pregen_prompt, pregen_negative_prompt, override_steps_count, pregen_steps_count):
-
+        do_not_save_grid = p.do_not_save_grid
         print('Inpainting pre-generation: creating init images from a text prompt')
         p_txt = StableDiffusionProcessingTxt2Img(
                 sd_model=sd_model,
@@ -49,7 +49,8 @@ class Script(scripts.Script):
                 restore_faces=p.restore_faces,
                 tiling=p.tiling,
                 enable_hr=None,
-                denoising_strength=None
+                denoising_strength=None,
+                do_not_save_grid=True
             )
         
         processed = processing.process_images(p_txt)
@@ -62,7 +63,6 @@ class Script(scripts.Script):
 
         print('Inpainting pre-generation: actually inpainting the generated images')
         p.n_iter = 1
-        do_not_save_grid = p.do_not_save_grid
         p.do_not_save_grid=True
         output_images = []
 
@@ -70,12 +70,13 @@ class Script(scripts.Script):
             p.init_images = pics
             processed = processing.process_images(p)
             output_images += processed.images
-            p_info + '\n' + processed.info
+            p_info = p_info + '\n' + processed.info
         
         index_of_first_image = 0
+        p.do_not_save_grid = do_not_save_grid
         if not do_not_save_grid:
             index_of_first_image = to_grid(p, p_info, "grid", output_images)
-
+        
         processed = Processed(p, output_images, initial_seed, p_info, index_of_first_image=index_of_first_image)
         return processed
     
