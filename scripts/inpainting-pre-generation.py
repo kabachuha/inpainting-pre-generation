@@ -18,9 +18,12 @@ class Script(scripts.Script):
         pregen_prompt = gr.Textbox(label="Pre-generation prompt", lines=2, interactive=True, value = "")
         pregen_negative_prompt = gr.Textbox(label="Pre-generation negative prompt", lines=2, interactive=True, value = "")
 
-        return [pregen_prompt, pregen_negative_prompt]
+        override_steps_count = gr.Checkbox(label="Override pregen steps count", value=False, interactive=True)
+        pregen_steps_count = gr.Slider(minimum=1, maximum=150, step=1, label='Pre-generation steps count', value=20, interactive=True)
+
+        return [pregen_prompt, pregen_negative_prompt, override_steps_count, pregen_steps_count]
     
-    def run(self, p, pregen_prompt, pregen_negative_prompt):
+    def run(self, p, pregen_prompt, pregen_negative_prompt, override_steps_count, pregen_steps_count):
 
         print('Inpainting pre-generation: creating init images from a text prompt')
         p_txt = StableDiffusionProcessingTxt2Img(
@@ -38,7 +41,7 @@ class Script(scripts.Script):
                 sampler_name=p.sampler_name,
                 batch_size=p.batch_size,
                 n_iter=p.n_iter,
-                steps=p.steps,
+                steps=p.steps if not override_steps_count else pregen_steps_count,
                 cfg_scale=p.cfg_scale,
                 width=p.width,
                 height=p.height,
